@@ -33,7 +33,7 @@ class VerificationClient(discord.Client):
     async def on_member_join(self,member):
         channel = await member.create_dm()
         id = self.generate_id()
-        self.ids_to_names[id]=member
+        self.ids_to_names[str(id)]=member
         await channel.send("https://URL/?id="+str(id))
 
     async def on_ready(self):
@@ -51,7 +51,7 @@ class VerificationClient(discord.Client):
             print("verifying")
             channel = await message.author.create_dm()
             id = self.generate_id()
-            self.ids_to_names[id]=message.author
+            self.ids_to_names[str(id)]=message.author
             await channel.send("https://URL/?id="+str(id))
     async def add_user_role(self):
         while(True):
@@ -84,7 +84,7 @@ def init_saml_auth(req):
 def prepare_flask_request(request):
     # If server is behind proxys or balancers use the HTTP_X_FORWARDED fields
     return {
-        'https': 'on'# if request.scheme == 'https' else 'off',
+        'https': 'on',# if request.scheme == 'https' else 'off',
         'http_host': 'PUT URL HERE',#request.host,
         'script_name': request.path,
         'get_data': request.args.copy(),
