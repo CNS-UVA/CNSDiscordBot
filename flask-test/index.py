@@ -92,6 +92,10 @@ def index():
     attributes = False
     paint_logout = False
 
+    if 'id' in request.args:
+        return_to = request.args.get("id")
+        return redirect(auth.login(return_to))
+
     if 'sso' in request.args:
         return redirect(auth.login())
         # If AuthNRequest ID need to be stored in order to later validate it, do instead
@@ -136,6 +140,7 @@ def index():
             if 'RelayState' in request.form and self_url != request.form['RelayState']:
                 # To avoid 'Open Redirect' attacks, before execute the redirection confirm
                 # the value of the request.form['RelayState'] is a trusted URL.
+                print(request.form['RelayState'])
                 return redirect(auth.redirect_to(request.form['RelayState']))
         elif auth.get_settings().is_debug_active():
             error_reason = auth.get_last_error_reason()
@@ -202,7 +207,7 @@ def metadata():
     return resp
 def runFlask():
     app.run(host='0.0.0.0', port=80, debug=False)
-    
+
 if __name__ == "__main__":
     flaskthread = threading.Thread(target=runFlask,daemon=True)
     flaskthread.start()
