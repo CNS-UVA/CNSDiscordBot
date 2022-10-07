@@ -11,6 +11,7 @@ from onelogin.saml2.auth import OneLogin_Saml2_Auth
 from onelogin.saml2.utils import OneLogin_Saml2_Utils
 from onelogin.saml2.idp_metadata_parser import OneLogin_Saml2_IdPMetadataParser 
 from werkzeug.middleware.proxy_fix import ProxyFix
+from discord.ext import tasks
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'put here'
@@ -20,7 +21,7 @@ app.wsgi_app = ProxyFix(app.wsgi_app,x_for=1,x_proto=1,x_host=1,x_prefix=1)
 discord_token = 'INSERT TOKEN'
 
 
-
+id_queue = []
 class VerificationClient(discord.Client):
 
     ids_to_names = {}
@@ -37,6 +38,7 @@ class VerificationClient(discord.Client):
 
     async def on_ready(self):
         print(f'Logged on as {self.user}!')
+        self.loop.create_task(self.add_user_role())
 
     async def on_message(self, message):
         print("test")
@@ -49,18 +51,25 @@ class VerificationClient(discord.Client):
             print("verifying")
             channel = await message.author.create_dm()
             id = self.generate_id()
-            self.ids_to_names[id]=message.author.id
+            self.ids_to_names[id]=message.author
             await channel.send("https://URL/?id="+str(id))
-    async def add_user_role(self,id,role):
-
-        member = self.ids_to_names[id]
-        role = get(member.server.roles, name="TestSaml")
-        await bot.add_roles(member, role)
+    async def add_user_role(self):
+        while(True):
+            await self.wait_until_ready()
+            while(len(id_queue)):
+                id = id_queue.pop(0)
+                member = self.ids_to_names[id]
+                try:
+                    role = discord.utils.get(member.guild.roles,name="INSERT_ROLE_NAME")
+                    await member.add_roles(role,atomic=True)
+                except Exception as e:
+                    print(e)
+            await asyncio.sleep(1)
 
 intents = discord.Intents.all()
 intents.presences  = False
 
-client = VerificationClient(intents=intents)
+# client = VerificationClient(intents=intents)
 
 
 
@@ -146,16 +155,15 @@ def index():
                 # the value of the request.form['RelayState'] is a trusted URL.
                 print(request.form['RelayState'])
                 id = request.form['RelayState']
-                client.add_user_role(id,'TestSaml')
+                if id in client.ids_to_names:
+                    id_queue.append(id)
                 return render_template(
-        'index.html',
-        errors=errors,
-        error_reason=error_reason,
-        not_auth_warn=not_auth_warn,
-        success_slo=success_slo,
-        attributes=attributes,
-        paint_logout=paint_logout
+        'verified.html'
     )
+    else:
+        return render_template(
+            'not_verified.html'
+        )
         elif auth.get_settings().is_debug_active():
             error_reason = auth.get_last_error_reason()
     elif 'sls' in request.args:
@@ -226,6 +234,7 @@ if __name__ == "__main__":
     flaskthread = threading.Thread(target=runFlask,daemon=True)
     flaskthread.start()
     intents = discord.Intents.all()
+    client = VerificationClient(intents=intents)
     client.run(discord_token)
 
 
