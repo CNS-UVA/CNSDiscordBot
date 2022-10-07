@@ -164,7 +164,7 @@ def index():
         return render_template(
             'not_verified.html'
         )
-        elif auth.get_settings().is_debug_active():
+    elif auth.get_settings().is_debug_active():
             error_reason = auth.get_last_error_reason()
     elif 'sls' in request.args:
         request_id = None
