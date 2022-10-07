@@ -11,7 +11,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'put here'
 app.config['SAML_PATH'] = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'saml')
-app.wsgi_app = ProxyFix(app.wsgi,x_for=1,x_proto=1,x_host=1,x_prefix=1)
+app.wsgi_app = ProxyFix(app.wsgi_app,x_for=1,x_proto=1,x_host=1,x_prefix=1)
 
 def init_saml_auth(req):
     # idp_data = OneLogin_Saml2_IdPMetadataParser.parse_remote('https://shibidp.its.virginia.edu/idp/shibboleth/uva-idp-metadata.xml')
