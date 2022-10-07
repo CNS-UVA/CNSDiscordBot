@@ -7,7 +7,7 @@
         "signMetadata": false,
         "wantMessagesSigned": false,
         "wantAssertionsSigned": false,
-        "wantNameId" : true,
+        "wantNameId" : false,
         "wantNameIdEncrypted": false,
         "wantAssertionsEncrypted": false,
         "allowSingleLabelDomains": false,

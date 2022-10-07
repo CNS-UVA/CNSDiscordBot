@@ -6,16 +6,16 @@ from flask import (Flask, request, render_template, redirect, session,
 from onelogin.saml2.auth import OneLogin_Saml2_Auth
 from onelogin.saml2.utils import OneLogin_Saml2_Utils
 from onelogin.saml2.idp_metadata_parser import OneLogin_Saml2_IdPMetadataParser 
-
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'put here'
 app.config['SAML_PATH'] = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'saml')
-
+app.wsgi_app = ProxyFix(app.wsgi,x_for=1,x_proto=1,x_host=1,x_prefix=1)
 
 def init_saml_auth(req):
-    idp_data = OneLogin_Saml2_IdPMetadataParser.parse_remote('https://shibidp.its.virginia.edu/idp/shibboleth/uva-idp-metadata.xml')
-    print(idp_data)
+    # idp_data = OneLogin_Saml2_IdPMetadataParser.parse_remote('https://shibidp.its.virginia.edu/idp/shibboleth/uva-idp-metadata.xml')
+    # print(idp_data)
     auth = OneLogin_Saml2_Auth(req, custom_base_path=app.config['SAML_PATH'])
     
     return auth
@@ -25,7 +25,7 @@ def prepare_flask_request(request):
     # If server is behind proxys or balancers use the HTTP_X_FORWARDED fields
     return {
         'https': 'on' if request.scheme == 'https' else 'off',
-        'http_host': request.host,
+        'http_host': 'PUT URL HERE',#request.host,
         'script_name': request.path,
         'get_data': request.args.copy(),
         # Uncomment if using ADFS as IdP, https://github.com/onelogin/python-saml/pull/144
