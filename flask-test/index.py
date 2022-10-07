@@ -1,5 +1,9 @@
 import os
 
+import discord
+import threading
+import uuid
+
 from flask import (Flask, request, render_template, redirect, session,
                    make_response)
 
@@ -12,6 +16,49 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'put here'
 app.config['SAML_PATH'] = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'saml')
 app.wsgi_app = ProxyFix(app.wsgi_app,x_for=1,x_proto=1,x_host=1,x_prefix=1)
+
+discord_token = 'INSERT TOKEN'
+
+
+
+class VerificationClient(discord.Client):
+
+    ids_to_names = {}
+    def generate_id(self):
+        id = uuid.uuid1()
+        while id in self.ids_to_names.keys():
+            id = uuid.uuid1()
+        return id
+    async def on_member_join(self,member):
+        channel = await member.create_dm()
+        id = self.generate_id()
+        self.ids_to_names[id]=member.id
+        await channel.send("https://URL/?id="+str(id))
+
+    async def on_ready(self):
+        print(f'Logged on as {self.user}!')
+
+    async def on_message(self, message):
+        print("test")
+        print(message.content)
+        if message.author == self.user:
+            print('my message')
+            print(self.ids_to_names)
+            return
+        if "!VerifyMe" in message.content:
+            print("verifying")
+            channel = await message.author.create_dm()
+            id = self.generate_id()
+            self.ids_to_names[id]=message.author.id
+            await channel.send("https://URL/?id="+str(id))
+
+
+intents = discord.Intents.all()
+intents.presences  = False
+
+client = VerificationClient(intents=intents)
+
+
 
 def init_saml_auth(req):
     # idp_data = OneLogin_Saml2_IdPMetadataParser.parse_remote('https://shibidp.its.virginia.edu/idp/shibboleth/uva-idp-metadata.xml')
@@ -153,8 +200,16 @@ def metadata():
     else:
         resp = make_response(', '.join(errors), 500)
     return resp
-
-
-if __name__ == "__main__":
+def runFlask():
     app.run(host='0.0.0.0', port=80, debug=False)
+    
+if __name__ == "__main__":
+    flaskthread = threading.Thread(target=runFlask,daemon=True)
+    flaskthread.start()
+    intents = discord.Intents.all()
+    client.run(discord_token)
+
+
+# if __name__ == "__main__":
+#     app.run(host='0.0.0.0', port=80, debug=False)
 
