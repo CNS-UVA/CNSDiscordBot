@@ -157,13 +157,13 @@ def index():
                 id = request.form['RelayState']
                 if id in client.ids_to_names:
                     id_queue.append(id)
-                return render_template(
-        'verified.html'
-    )
+                    return render_template(
+                    'verified.html'
+                        )
                 else:
-        return render_template(
-            'not_verified.html'
-        )
+                    return render_template(
+                        'not_verified.html'
+                            )
         elif auth.get_settings().is_debug_active():
             error_reason = auth.get_last_error_reason()
     elif 'sls' in request.args:
