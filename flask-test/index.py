@@ -155,10 +155,12 @@ def index():
                 # the value of the request.form['RelayState'] is a trusted URL.
                 print(request.form['RelayState'])
                 id = request.form['RelayState']
-                if id in client.ids_to_names:
-                    id_queue.append(id)
+                if id in client.ids_to_names:      
+                    session['discord_id'] = id
                     return render_template(
-                    'verified.html'
+                    'verificationbutton.html',
+                        username=client.ids_to_names[id].name,
+                        discriminator = client.ids_to_names[id].discriminator
                         )
                 else:
                     return render_template(
