@@ -1,0 +1,4 @@
+This bot can verify members of a discord using UVA's SAML. 
+It runs a flask server to conduct the saml, and a discord bot to send users to the site and change their roles accordingly.
+
+Will be updated once I remember what I did.
