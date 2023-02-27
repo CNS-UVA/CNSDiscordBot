@@ -13,6 +13,7 @@ from onelogin.saml2.idp_metadata_parser import OneLogin_Saml2_IdPMetadataParser
 from werkzeug.middleware.proxy_fix import ProxyFix
 from discord.ext import tasks
 
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'put here'
 app.config['SAML_PATH'] = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'saml')
@@ -20,26 +21,34 @@ app.wsgi_app = ProxyFix(app.wsgi_app,x_for=1,x_proto=1,x_host=1,x_prefix=1)
 
 discord_token = 'INSERT TOKEN'
 
-
+#queue for id's to be registered
 id_queue = []
-class VerificationClient(discord.Client):
 
+class VerificationClient(discord.Client):
+    #dict of id's to discord names
     ids_to_names = {}
+
+    #generates a unique id
     def generate_id(self):
         id = uuid.uuid1()
         while id in self.ids_to_names.keys():
             id = uuid.uuid1()
         return id
+    
+    #triggered when user joins. Creates an id and stores member in dict with id as key.
+    #also sends url.
     async def on_member_join(self,member):
         channel = await member.create_dm()
         id = self.generate_id()
         self.ids_to_names[str(id)]=member
         await channel.send("https://URL/?id="+str(id))
 
+    #triggers when logged in
     async def on_ready(self):
         print(f'Logged on as {self.user}!')
         self.loop.create_task(self.add_user_role())
 
+    #when messaged !VerifyMe, sends users a url with their ID
     async def on_message(self, message):
         print("test")
         print(message.content)
@@ -53,6 +62,8 @@ class VerificationClient(discord.Client):
             id = self.generate_id()
             self.ids_to_names[str(id)]=message.author
             await channel.send("https://URL/?id="+str(id))
+
+    #Checks queue, creates role for user.
     async def add_user_role(self):
         while(True):
             await self.wait_until_ready()
@@ -72,7 +83,7 @@ intents.presences  = False
 # client = VerificationClient(intents=intents)
 
 
-
+# initializes saml
 def init_saml_auth(req):
     # idp_data = OneLogin_Saml2_IdPMetadataParser.parse_remote('https://shibidp.its.virginia.edu/idp/shibboleth/uva-idp-metadata.xml')
     # print(idp_data)
@@ -80,7 +91,7 @@ def init_saml_auth(req):
     
     return auth
 
-
+#code to prepare saml request.
 def prepare_flask_request(request):
     # If server is behind proxys or balancers use the HTTP_X_FORWARDED fields
     return {
@@ -96,6 +107,7 @@ def prepare_flask_request(request):
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
+    #initialization
     req = prepare_flask_request(request)
     auth = init_saml_auth(req)
     errors = []
@@ -105,19 +117,25 @@ def index():
     attributes = False
     paint_logout = False
 
+    #redirects user to the login url, with instruction to return to their id.
     if 'id' in request.args:
         return_to = request.args.get("id")
         return redirect(auth.login(return_to))
-
+    
+    #probably unneccessary, but why not.
     if 'sso' in request.args:
         return redirect(auth.login())
         # If AuthNRequest ID need to be stored in order to later validate it, do instead
         # sso_built_url = auth.login()
         # request.session['AuthNRequestID'] = auth.get_last_request_id()
         # return redirect(sso_built_url)
+    
+    #if you want attributes
     elif 'sso2' in request.args:
         return_to = '%sattrs/' % request.host_url
         return redirect(auth.login(return_to))
+
+    #logout, currently unused
     elif 'slo' in request.args:
         name_id = session_index = name_id_format = name_id_nq = name_id_spnq = None
         if 'samlNameId' in session:
@@ -132,6 +150,8 @@ def index():
             name_id_spnq = session['samlNameIdSPNameQualifier']
 
         return redirect(auth.logout(name_id=name_id, session_index=session_index, nq=name_id_nq, name_id_format=name_id_format, spnq=name_id_spnq))
+
+    #return point.
     elif 'acs' in request.args:
         request_id = None
         if 'AuthNRequestID' in session:
@@ -153,15 +173,23 @@ def index():
             if 'RelayState' in request.form and self_url != request.form['RelayState']:
                 # To avoid 'Open Redirect' attacks, before execute the redirection confirm
                 # the value of the request.form['RelayState'] is a trusted URL.
+
+
                 print(request.form['RelayState'])
                 id = request.form['RelayState']
-                if id in client.ids_to_names:      
+
+                #if id associated with return is known, add the id to the verification queue.
+
+                if id in client.ids_to_names:    
+                    id_queue.append(id)
+  
                     session['discord_id'] = id
-                    return render_template(
-                    'verificationbutton.html',
-                        username=client.ids_to_names[id].name,
-                        discriminator = client.ids_to_names[id].discriminator
-                        )
+                    return render_template('verified.html')
+                    # return render_template(
+                    # 'verificationbutton.html',
+                    #     username=client.ids_to_names[id].name,
+                    #     discriminator = client.ids_to_names[id].discriminator
+                    #     )
                 else:
                     return render_template(
                         'not_verified.html'
@@ -200,7 +228,7 @@ def index():
         paint_logout=paint_logout
     )
 
-
+#returns attributes associated with user, here for debugging if needed.
 @app.route('/attrs/')
 def attrs():
     paint_logout = False
@@ -214,7 +242,7 @@ def attrs():
     return render_template('attrs.html', paint_logout=paint_logout,
                            attributes=attributes)
 
-
+#returns metadata for saml
 @app.route('/saml/metadata/')
 def metadata():
     req = prepare_flask_request(request)
@@ -229,9 +257,12 @@ def metadata():
     else:
         resp = make_response(', '.join(errors), 500)
     return resp
+#runs flask
 def runFlask():
     app.run(host='0.0.0.0', port=80, debug=False)
 
+
+#starts discord and flask.
 if __name__ == "__main__":
     flaskthread = threading.Thread(target=runFlask,daemon=True)
     flaskthread.start()
