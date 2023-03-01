@@ -194,9 +194,10 @@ def index():
                 #if id associated with return is known, add the id to the verification queue.
 
                 if id in client.ids_to_names:    
-                    id_queue.append(id)
   
                     session['discord_id'] = id
+                    id_queue.append(id)
+
                     return render_template('verified.html')
                     # return render_template(
                     # 'verificationbutton.html',
