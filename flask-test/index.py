@@ -84,7 +84,7 @@ class VerificationClient(discord.Client):
                 id = id_queue.pop(0)
                 member = self.ids_to_names[id]
                 try:
-                    role = discord.utils.get(member.guild.roles,name="INSERT_ROLE_NAME")
+                    role = discord.utils.get(member.guild.roles,name=verified_role)
                     await member.add_roles(role,atomic=True)
                 except Exception as e:
                     print(e)
