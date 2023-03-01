@@ -15,14 +15,27 @@ from discord.ext import tasks
 
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'put here'
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY',os.urandom(12))
 app.config['SAML_PATH'] = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'saml')
 app.wsgi_app = ProxyFix(app.wsgi_app,x_for=1,x_proto=1,x_host=1,x_prefix=1)
 
-discord_token = 'INSERT TOKEN'
+
+
+if(os.getenv('DISCORDTOKEN')):
+    with open(os.getenv('DISCORDTOKEN')) as tokenfile:
+        discord_token = tokenfile.read()
+
+
+
+URL = os.getenv('URL','auth.uvacns.com')
+verified_role = os.getenv('ROLE','Verified')
+
+
+
 
 #queue for id's to be registered
 id_queue = []
+
 
 class VerificationClient(discord.Client):
     #dict of id's to discord names
@@ -41,7 +54,7 @@ class VerificationClient(discord.Client):
         channel = await member.create_dm()
         id = self.generate_id()
         self.ids_to_names[str(id)]=member
-        await channel.send("https://URL/?id="+str(id))
+        await channel.send("https://"+URL+"/?id="+str(id))
 
     #triggers when logged in
     async def on_ready(self):
@@ -61,7 +74,7 @@ class VerificationClient(discord.Client):
             channel = await message.author.create_dm()
             id = self.generate_id()
             self.ids_to_names[str(id)]=message.author
-            await channel.send("https://URL/?id="+str(id))
+            await channel.send("https://"+URL+"/?id="+str(id))
 
     #Checks queue, creates role for user.
     async def add_user_role(self):
@@ -96,7 +109,7 @@ def prepare_flask_request(request):
     # If server is behind proxys or balancers use the HTTP_X_FORWARDED fields
     return {
         'https': 'on',# if request.scheme == 'https' else 'off',
-        'http_host': 'PUT URL HERE',#request.host,
+        'http_host': URL,#request.host,
         'script_name': request.path,
         'get_data': request.args.copy(),
         # Uncomment if using ADFS as IdP, https://github.com/onelogin/python-saml/pull/144
@@ -259,7 +272,7 @@ def metadata():
     return resp
 #runs flask
 def runFlask():
-    app.run(host='0.0.0.0', port=80, debug=False)
+    app.run(host='0.0.0.0', port=os.getenv('PORT',6969), debug=False)
 
 
 #starts discord and flask.
