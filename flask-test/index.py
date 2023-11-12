@@ -214,7 +214,7 @@ def index():
                     #     )
                 else:
                     return render_template(
-                        'not_verified.html'
+                        'not_verified.html', contact=contact_user
                             )
         elif auth.get_settings().is_debug_active():
             error_reason = auth.get_last_error_reason()
