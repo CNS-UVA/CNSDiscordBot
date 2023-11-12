@@ -1,4 +1,17 @@
 This bot can verify members of a discord using UVA's SAML. 
 It runs a flask server to conduct the saml, and a discord bot to send users to the site and change their roles accordingly.
 
-Will be updated once I remember what I did.
+The Discord bot's token is expected to be in a file which has its name sest to the DISCORDTOKEN environment variable.
+
+The bot will assign users the role assigned to the STUDENT_ROLE environment variable (default role name is Student) if they are a student.
+and assign the role assigned to the STAFF_ROLE environment variable if they are a staff member.
+
+Also, please set the CONTACT environment variable to the Discord username of someone who can give technical support if something goes wrong.
+
+The bot is set up to DM users a link to auth.uvacns.com when they either join the server or type "!VerifyMe"
+The link has a unique ID for each user that is linked back to their Discord account
+When they successfully log in with UVA's SAML verification, the bot checks if UVA says that they are a student or staff and assigns them the appropriate roles.
+The user is then linked back to auth.uvacns.com and told that they are verified on Discord! (and should contact the CONTACT person if something went wrong).
+
+Also downloading python3-saml can be really annoying because xmlsec is stupid.
+At least if you are on Ubuntu, make sure that you have pkg-config, libxml2-dev, libxmlsec1-dev, and libxmlsec1-openssl all apt installed and you should hopefully be able to build xmlsec.
