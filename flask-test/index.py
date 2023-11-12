@@ -28,12 +28,13 @@ if(os.getenv('DISCORDTOKEN')):
 
 
 URL = os.getenv('URL','auth.uvacns.com')
-verified_role = os.getenv('ROLE','Verified')
-
-
+student_role = os.getenv('STUDENT_ROLE','Student')
+staff_role = os.getenv('STAFF_ROLE','Staff')
+contact_user = os.getenv('CONTACT','ShakyWillow')
 
 
 #queue for id's to be registered
+#stores (id, roles to give)
 id_queue = []
 
 
@@ -81,11 +82,12 @@ class VerificationClient(discord.Client):
         while(True):
             await self.wait_until_ready()
             while(len(id_queue)):
-                id = id_queue.pop(0)
+                id, roles = id_queue.pop(0)
                 member = self.ids_to_names[id]
                 try:
-                    role = discord.utils.get(member.guild.roles,name=verified_role)
-                    await member.add_roles(role,atomic=True)
+                    for role in roles:
+                        roleToAdd = discord.utils.get(member.guild.roles,name=role)
+                        await member.add_roles(roleToAdd,atomic=True)
                 except Exception as e:
                     print(e)
             await asyncio.sleep(1)
@@ -196,9 +198,15 @@ def index():
                 if id in client.ids_to_names:    
   
                     session['discord_id'] = id
-                    id_queue.append(id)
+                    affiliations = session['samlUserdata']['urn:oid:1.3.6.1.4.1.5923.1.1.1.1'] # Yay saml and its dictorary keys
 
-                    return render_template('verified.html')
+                    roles = []
+                    if ('student' in affiliations): roles.append(student_role)
+                    if ('staff' in affiliations): roles.append(staff_role)
+
+                    id_queue.append((id, roles))
+
+                    return render_template('verified.html', contact=contact_user)
                     # return render_template(
                     # 'verificationbutton.html',
                     #     username=client.ids_to_names[id].name,
